@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Аврора — выживание в космосе</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--sp:calc(env(safe-area-inset-top,0px) + 8px);--sb:calc(env(safe-area-inset-bottom,0px) + 10px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;height:100%;background:#05070f;color:#dfeaf7;font:13px/1.35 'Bahnschrift','Segoe UI',system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#top{position:fixed;left:8px;right:8px;top:var(--sp);display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.b{position:relative;height:15px;width:132px;background:#ffffff18;border-radius:3px;margin:3px 0;overflow:hidden}
+.b i{position:absolute;inset:0 auto 0 0;display:block;width:100%}
+.b span{position:relative;font-size:10px;padding-left:5px;line-height:15px}
+#tel{font-size:11px;color:#8fa6c0;margin-top:2px}
+#mis{max-width:52%;background:#0a1020cc;border-left:3px solid #ffb347;padding:6px 9px;border-radius:0 4px 4px 0;align-self:flex-start}
+#mis small{color:#ffb347}
+#log{position:fixed;left:8px;right:8px;bottom:calc(var(--sb) + 150px);pointer-events:none;font-size:12px;text-shadow:0 1px 3px #000}
+#log div{background:#0a1020b0;padding:3px 8px;margin-top:2px;border-radius:3px;width:fit-content;max-width:92%}
+#log b{color:#5ee1ff}
+#ctl{position:fixed;left:10px;right:10px;bottom:var(--sb);display:flex;justify-content:space-between;align-items:flex-end}
+.g{display:flex;gap:10px}
+button{font:inherit;color:#dfeaf7;background:#101a30e0;border:1.5px solid #3a4f78;border-radius:14px;touch-action:none;cursor:pointer}
+.big{width:68px;height:68px;font-size:26px}
+.big.on,.sm.on{background:#5ee1ff;color:#05070f;border-color:#5ee1ff}
+.sm{display:block;width:92px;height:38px;margin-top:6px;font-size:13px}
+#mid{text-align:center}
+#ov{position:fixed;inset:0;background:#05070fee;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:12px}
+#ov h1{margin:0;font-size:34px;letter-spacing:.5px}
+#ov p{margin:0;max-width:420px;color:#9fb4cf;font-size:14px}
+#ov button{padding:14px 34px;font-size:18px;background:#ffb347;color:#05070f;border-color:#ffb347;font-weight:700}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="top"><div><div class="b"><i id="bh" style="background:#4fd18b"></i><span>Корпус</span></div><div class="b"><i id="bo" style="background:#5ee1ff"></i><span>Кислород</span></div><div class="b"><i id="bf" style="background:#ffb347"></i><span>Топливо</span></div><div id="tel"></div></div><div id="mis"></div></div>
+<div id="log"></div>
+<div id="ctl"><div class="g"><button class="big" data-h="l">◀</button><button class="big" data-h="r">▶</button></div>
+<div id="mid"><button class="sm on" id="sas">Стабилизация</button><button class="sm" id="brk">Автотормоз</button></div>
+<div class="g"><button class="big" data-h="s">▼</button><button class="big" data-h="t">▲</button></div></div>
+<div id="ov"><h1>Аврора</h1><p id="ovt">Ты капитан огромного корабля, потерявшего курс. Управление честное: инерции нет конца, развернуться можно только двигателями. Выполняй миссии, следи за кислородом и топливом, не врезайся в планеты.</p><p>Кнопки ◀ ▶ крутят корабль, ▲ даёт тягу, ▼ тормозной двигатель. «Автотормоз» сам разворачивает корабль против движения и гасит скорость. Клавиатура: A/D, W/S, F, B.</p><button id="go">Начать</button></div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('c'),g=cv.getContext('2d');let W,H,D;
+function rs(){D=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*D;cv.height=H*D}
+addEventListener('resize',rs);rs();
+const K={},B={};let sas=true,brake=false,run=false,over=false;
+function tg(k){if(k=='sas')sas=!sas;else brake=!brake;$('sas').classList.toggle('on',sas);$('brk').classList.toggle('on',brake)}
+addEventListener('keydown',e=>{K[e.code]=1;if(e.code=='KeyF')tg('sas');if(e.code=='KeyB')tg('brk');if(e.code.startsWith('Arrow'))e.preventDefault()});
+addEventListener('keyup',e=>K[e.code]=0);
+addEventListener('contextmenu',e=>e.preventDefault());
+document.querySelectorAll('[data-h]').forEach(b=>{const k=b.dataset.h;b.onpointerdown=e=>{e.preventDefault();B[k]=1;b.classList.add('on')};['pointerup','pointercancel','pointerleave'].forEach(v=>b['on'+v]=()=>{B[k]=0;b.classList.remove('on')})});
+$('sas').onclick=()=>tg('sas');$('brk').onclick=()=>tg('brk');
+const wr=x=>{while(x>Math.PI)x-=6.2832;while(x<-Math.PI)x+=6.2832;return x};
+const LOG=[];function say(w,t){LOG.push([w,t]);if(LOG.length>3)LOG.shift();$('log').innerHTML=LOG.map(l=>`<div><b>${l[0]}:</b> ${l[1]}</div>`).join('')}
+const ST={x:0,y:0,r:58,n:'Станция Ост-1'},BC={x:-1250,y:-1600};
+const P=[{n:'Кеплер-b',x:1800,y:-600,r:180,gm:3.5e6,c:['#d9985a','#6e3318']},{n:'Бореаль',x:-2600,y:1400,r:320,gm:1e7,c:['#8fc0ea','#2a4a85'],gas:1},{n:'Рубра',x:500,y:2800,r:140,gm:2.2e6,c:['#c9564a','#3f130f']}];
+const M=[
+{t:'Подлети к станции Ост-1 и сбрось скорость',g:()=>ST,range:190,sp:60,hold:1.5,s:['Вега','Аврора, ты сбилась с курса. Подойди к станции Ост-1, нужен твой отчёт.'],d:['Вега','Принято. У нас можно пополнить воздух и топливо. Первое задание: запчасти для колонии на Кеплере-b.']},
+{t:'Доставь запчасти на орбиту Кеплера-b',g:()=>P[0],range:P[0].r+230,sp:90,hold:3,s:['Мара','Груз в трюме. Держись близко к планете и не разгоняйся, иначе стыковка не пройдёт.'],d:['Мара','Груз принят! Теперь нужен скан газового гиганта Бореаль, там странные сигналы.']},
+{t:'Просканируй газовый гигант Бореаль',g:()=>P[1],range:P[1].r+320,sp:140,hold:6,s:['Мара','Гравитация там сильная. Следи за топливом.'],d:['Мара','Скан завершён. На записи слышен сигнал бедствия из пояса астероидов.']},
+{t:'Найди выжившего Лео в поясе астероидов',g:()=>BC,range:120,sp:50,hold:2.5,s:['Лео','...кто-нибудь... я в поясе, мой корабль мёртв...'],d:['Лео','Я на борту! Спасибо, капитан. Лети домой, на станцию.']},
+{t:'Вернись на станцию Ост-1',g:()=>ST,range:190,sp:60,hold:1.5,s:['Вега','Ждём вас на Ост-1.'],d:['Вега','Аврора дома. Ты настоящий капитан.']}];
+const chat=[['Мара','Реакторы в норме, капитан.'],['Лео','Если что, я умею чинить обшивку.'],['Вега','Эфир чистый. Берегите кислород.'],['Мара','Старайтесь не лететь на полной тяге вечно: тормозить придётся тем же топливом.']];
+let S,ast,mi,mh,parts,tm,hm,flag,dock,z=.8,th=0,lastChat;
+const stars=[];for(let i=0;i<220;i++)stars.push({x:Math.random()*3000,y:Math.random()*3000,p:.02+Math.random()*.12,z:Math.random()<.2?2:1,o:.3+Math.random()*.7});
+function reset(){S={x:-700,y:450,vx:0,vy:0,a:0,w:0,fuel:100,o2:100,hull:100,shake:0};ast=[];
+ while(ast.length<45){const an=Math.random()*6.28,d=Math.sqrt(Math.random())*620,x=BC.x+Math.cos(an)*d,y=BC.y+Math.sin(an)*d;if(d<170)continue;ast.push({x,y,r:8+Math.random()*24,vx:(Math.random()-.5)*14,vy:(Math.random()-.5)*14})}
+ parts=[];mi=0;mh=0;tm=0;hm=0;flag={};over=false;lastChat=0;LOG.length=0;brake=false;$('brk').classList.remove('on');say(...M[0].s)}
+function hit(cx,cy,cr,ox,oy){const dx=S.x-cx,dy=S.y-cy,d=Math.hypot(dx,dy),R=cr+30;if(d>=R)return;const nx=dx/d,ny=dy/d;S.x=cx+nx*R;S.y=cy+ny*R;const vn=(S.vx-ox)*nx+(S.vy-oy)*ny;if(vn<0){const sp=-vn;if(sp>35){S.hull-=(sp-35)*.22;S.shake=.4;if(tm-hm>1.5){say('Мара','Удар! Корпус повреждён.');hm=tm}}S.vx-=1.3*vn*nx;S.vy-=1.3*vn*ny;S.vx*=.97;S.vy*=.97}}
+function end(txt,btn){over=true;$('ov').style.display='flex';$('ovt').textContent=txt;$('ov').querySelector('h1').textContent=btn[0];$('go').textContent=btn[1]}
+function up(dt){tm+=dt;
+ const L=K.KeyA||K.ArrowLeft||B.l,R=K.KeyD||K.ArrowRight||B.r,T=K.KeyW||K.ArrowUp||B.t,V=K.KeyS||K.ArrowDown||B.s;
+ const spd=Math.hypot(S.vx,S.vy),rot=(R?1:0)-(L?1:0);let aligned=false;
+ if(rot)S.w+=rot*2.4*dt;
+ else if(brake&&spd>4){const e=wr(Math.atan2(-S.vy,-S.vx)-S.a);S.w+=Math.max(-3,Math.min(3,e*6-S.w*3.5))*dt;aligned=Math.abs(e)<.2}
+ else if(sas)S.w*=Math.exp(-2.2*dt);
+ if(brake&&spd<=4&&!T)tg('brk');
+ S.w=Math.max(-2.5,Math.min(2.5,S.w));S.a+=S.w*dt;
+ th=0;
+ if(T&&S.fuel>0){th=1;S.fuel-=1.2*dt}else if(V&&S.fuel>0){th=-.4;S.fuel-=.5*dt}else if(brake&&aligned&&S.fuel>0){th=1;S.fuel-=1.2*dt}
+ S.vx+=Math.cos(S.a)*th*120*dt;S.vy+=Math.sin(S.a)*th*120*dt;
+ for(const p of P){const dx=p.x-S.x,dy=p.y-S.y,d=Math.hypot(dx,dy),f=p.gm/(d*d);S.vx+=dx/d*f*dt;S.vy+=dy/d*f*dt}
+ S.x+=S.vx*dt;S.y+=S.vy*dt;
+ for(const p of P)hit(p.x,p.y,p.r,0,0);hit(ST.x,ST.y,ST.r,0,0);
+ for(const a of ast){a.x+=a.vx*dt;a.y+=a.vy*dt;if(Math.abs(a.x-S.x)<400&&Math.abs(a.y-S.y)<400)hit(a.x,a.y,a.r,a.vx,a.vy)}
+ if(th){const s=th>0?-1:1,c=Math.cos(S.a),n=Math.sin(S.a);for(let i=0;i<2;i++)parts.push({x:S.x+s*c*46,y:S.y+s*n*46,vx:S.vx+s*c*200*Math.abs(th)+(Math.random()-.5)*50,vy:S.vy+s*n*200*Math.abs(th)+(Math.random()-.5)*50,l:.6})}
+ for(let i=parts.length-1;i>=0;i--){const q=parts[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;if(q.l<=0)parts.splice(i,1)}
+ S.o2-=.35*dt;dock=Math.hypot(S.x-ST.x,S.y-ST.y)<190&&spd<60;
+ if(dock){S.fuel=Math.min(100,S.fuel+22*dt);S.o2=Math.min(100,S.o2+14*dt);S.hull=Math.min(100,S.hull+6*dt)}
+ if(S.o2<25&&!flag.o){flag.o=1;say('Мара','Кислород на исходе! Вернись на станцию.')}if(S.o2>40)flag.o=0;
+ if(S.fuel<15&&!flag.f){flag.f=1;say('Мара','Топливо почти кончилось. Лети по инерции.')}if(S.fuel>40)flag.f=0;
+ if(tm-lastChat>45){lastChat=tm;const c=chat[Math.floor(Math.random()*chat.length)];say(c[0],c[1])}
+ const m=M[mi],tp=m.g(),d=Math.hypot(S.x-tp.x,S.y-tp.y);
+ if(d<m.range&&spd<m.sp)mh+=dt;else mh=Math.max(0,mh-dt);
+ if(mh>=m.hold){say(...m.d);mi++;mh=0;if(mi>=M.length){end('Все миссии выполнены. Колония спасена, Лео в безопасности, корабль цел.',['Победа','Играть снова'])}else say(...M[mi].s)}
+ if(S.hull<=0)end('Корпус разрушен. Аврора потеряна.',['Крушение','Заново']);
+ else if(S.o2<=0)end('Кислород закончился. Экипаж не выжил.',['Гибель экипажа','Заново'])}
+function dr(){g.setTransform(D,0,0,D,0,0);g.fillStyle='#04060d';g.fillRect(0,0,W,H);if(!S)return;
+ const spd=Math.hypot(S.vx,S.vy);z+=(Math.max(.32,Math.min(1,1.05-spd/800))-z)*.04;
+ const sh=S.shake>0?(S.shake-=.016,(Math.random()-.5)*8):0;
+ g.fillStyle='#fff';for(const s of stars){g.globalAlpha=s.o;g.fillRect(((s.x-S.x*s.p)%W+W)%W,((s.y-S.y*s.p)%H+H)%H,s.z,s.z)}g.globalAlpha=1;
+ g.setTransform(D*z,0,0,D*z,D*(W/2+sh-S.x*z),D*(H/2+sh-S.y*z));
+ let gr=g.createRadialGradient(4200,-3200,0,4200,-3200,900);gr.addColorStop(0,'#fff6d0');gr.addColorStop(.25,'#ffcf6a');gr.addColorStop(1,'#ffcf6a00');g.fillStyle=gr;g.beginPath();g.arc(4200,-3200,900,0,6.3);g.fill();
+ g.font=`${Math.round(15/z)}px 'Segoe UI',system-ui`;g.textAlign='center';
+ for(const p of P){gr=g.createRadialGradient(p.x,p.y,p.r*.9,p.x,p.y,p.r*1.25);gr.addColorStop(0,p.c[0]+'66');gr.addColorStop(1,p.c[0]+'00');g.fillStyle=gr;g.beginPath();g.arc(p.x,p.y,p.r*1.25,0,6.3);g.fill();
+  gr=g.createRadialGradient(p.x-p.r*.4,p.y-p.r*.4,p.r*.1,p.x,p.y,p.r);gr.addColorStop(0,p.c[0]);gr.addColorStop(1,p.c[1]);g.fillStyle=gr;g.beginPath();g.arc(p.x,p.y,p.r,0,6.3);g.fill();
+  if(p.gas){g.save();g.clip();g.fillStyle='#ffffff22';for(let i=-4;i<5;i++)g.fillRect(p.x-p.r,p.y+i*p.r*.22,p.r*2,p.r*.09);g.restore();g.strokeStyle='#cfe3ff55';g.lineWidth=26;g.beginPath();g.ellipse(p.x,p.y,p.r*1.7,p.r*.45,-.35,0,6.3);g.stroke()}
+  g.fillStyle='#9fb4cf';g.fillText(p.n,p.x,p.y-p.r*1.35)}
+ g.setLineDash([12,12]);g.lineWidth=2/z;g.strokeStyle='#5ee1ff44';g.beginPath();g.arc(ST.x,ST.y,190,0,6.3);g.stroke();
+ const mk=Math.min(mi,M.length-1),m=M[mk],tp=m.g();g.strokeStyle='#ffb34777';g.beginPath();g.arc(tp.x,tp.y,m.range,0,6.3);g.stroke();g.setLineDash([]);
+ g.save();g.translate(ST.x,ST.y);g.rotate(tm*.15);g.strokeStyle='#b8c6dc';g.lineWidth=10;g.beginPath();g.arc(0,0,48,0,6.3);g.stroke();g.lineWidth=5;for(let i=0;i<4;i++){g.rotate(1.5708);g.beginPath();g.moveTo(0,0);g.lineTo(48,0);g.stroke()}g.fillStyle='#5ee1ff';g.beginPath();g.arc(0,0,14,0,6.3);g.fill();g.restore();
+ g.fillStyle='#9fb4cf';g.fillText(ST.n,ST.x,ST.y-85);
+ for(const a of ast){g.fillStyle='#6b645d';g.strokeStyle='#8a8279';g.lineWidth=2;g.beginPath();g.arc(a.x,a.y,a.r,0,6.3);g.fill();g.stroke()}
+ if(mi<=3){const pu=(tm*1.2)%1;g.strokeStyle=`rgba(94,225,255,${1-pu})`;g.lineWidth=3/z;g.beginPath();g.arc(BC.x,BC.y,10+pu*60,0,6.3);g.stroke();g.fillStyle='#5ee1ff';g.beginPath();g.arc(BC.x,BC.y,5,0,6.3);g.fill()}
+ for(const q of parts){g.fillStyle=`rgba(255,${120+q.l*200|0},60,${q.l})`;g.beginPath();g.arc(q.x,q.y,2+q.l*5,0,6.3);g.fill()}
+ g.save();g.translate(S.x,S.y);g.rotate(S.a);
+ if(th){g.fillStyle='#ffb347';g.beginPath();if(th>0){g.moveTo(-46,-9);g.lineTo(-46-30-Math.random()*20,0);g.lineTo(-46,9)}else{g.moveTo(44,-6);g.lineTo(44+14+Math.random()*8,0);g.lineTo(44,6)}g.fill()}
+ g.fillStyle='#5f7088';for(const s of[-1,1]){g.beginPath();g.moveTo(-10,s*14);g.lineTo(-34,s*36);g.lineTo(-46,s*36);g.lineTo(-38,s*12);g.fill()}
+ g.fillStyle='#9fb0c6';g.strokeStyle='#e8f1ff';g.lineWidth=1.5;g.beginPath();g.moveTo(48,0);g.lineTo(18,-10);g.lineTo(-28,-18);g.lineTo(-46,-12);g.lineTo(-46,12);g.lineTo(-28,18);g.lineTo(18,10);g.closePath();g.fill();g.stroke();
+ g.fillStyle='#5ee1ff';g.beginPath();g.ellipse(24,0,10,4,0,0,6.3);g.fill();g.fillStyle='#7d8da6';g.fillRect(-20,-4,30,8);
+ g.fillStyle=Math.sin(tm*5)>0?'#ff5a5f':'#4fd18b';g.beginPath();g.arc(-30,-34,3,0,6.3);g.arc(-30,34,3,0,6.3);g.fill();g.restore();
+ g.setTransform(D,0,0,D,0,0);
+ const dx=tp.x-S.x,dy=tp.y-S.y,dd=Math.hypot(dx,dy);
+ if(dd*z>Math.min(W,H)*.4){const an=Math.atan2(dy,dx),rr=Math.min(W,H)*.36;g.save();g.translate(W/2+Math.cos(an)*rr,H/2+Math.sin(an)*rr);g.rotate(an);g.fillStyle='#ffb347';g.beginPath();g.moveTo(14,0);g.lineTo(-8,-9);g.lineTo(-8,9);g.fill();g.restore()}
+ $('bh').style.width=Math.max(0,S.hull)+'%';$('bo').style.width=Math.max(0,S.o2)+'%';$('bf').style.width=Math.max(0,S.fuel)+'%';
+ $('tel').textContent=`Скорость ${spd.toFixed(0)} · ${dock?'стыковка, идёт пополнение':'вне станции'}`;
+ $('mis').innerHTML=`${m.t}<br><small>Дистанция ${Math.max(0,dd-m.range).toFixed(0)}${mh>0?` · удержание ${mh.toFixed(1)}/${m.hold} с`:''} · миссия ${mk+1} из ${M.length}</small>`}
+let last=0;function lp(t){const dt=Math.min(.033,(t-last)/1000||0);last=t;if(run&&!over)up(dt);dr();requestAnimationFrame(lp)}
+$('go').onclick=()=>{$('ov').style.display='none';run=true;reset()};
+requestAnimationFrame(lp);
+</script></body></html>

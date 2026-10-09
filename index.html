@@ -408,6 +408,7 @@ function buildApartment(){
  directBox(null,wood,3.6,.48,.6,x,.36,z-4.7);directBox(null,dark,3.1,1.85,.2,x,1.8,z-4.85);
  const tvCanvas=document.createElement('canvas');tvCanvas.width=1024;tvCanvas.height=576;const tvCtx=tvCanvas.getContext('2d');const tvTexture=new THREE.CanvasTexture(tvCanvas);tvTexture.encoding=THREE.sRGBEncoding;tvTexture.minFilter=THREE.LinearFilter;
  const tvScreen=new THREE.Mesh(new THREE.PlaneGeometry(2.85,1.55),new THREE.MeshBasicMaterial({map:tvTexture,side:THREE.DoubleSide}));tvScreen.position.set(x,1.88,z-4.72);tvScreen.rotation.y=Math.PI;scene.add(tvScreen);
+ const metal=flat(0x8a9196,{roughness:.4,metalness:.6});
  const aerial=directBox(null,metal,.12,.12,.12,x+1.2,2.9,z-4.8);aerial.rotation.z=.35;
  // Kitchen counter, sink, fridge and cupboards.
  const cab=flat(0xb7a58b,{roughness:.9}),steel=flat(0x92999c,{roughness:.35,metalness:.5});
@@ -447,7 +448,7 @@ function buildStoreInterior(){
  directBox(null,floor,23,.18,23,x,.02,z);directBox(null,wall,.25,3.5,23,x-11.5,1.8,z);directBox(null,wall,.25,3.5,23,x+11.5,1.8,z);directBox(null,wall,8.7,3.5,.25,x-7.15,1.8,z+11.5);directBox(null,wall,8.7,3.5,.25,x+7.15,1.8,z+11.5);directBox(null,wall,23,3.5,.25,x,1.8,z-11.5);
  const frame=flat(0x343b42,{roughness:.8}),door=flat(0x5c4434,{roughness:.9});directBox(null,frame,.18,3.1,.18,x-1.65,1.55,z+11.45);directBox(null,frame,.18,3.1,.18,x+1.65,1.55,z+11.45);directBox(null,door,3.1,2.8,.12,x,1.4,z+11.5);storeDoorPanels.push(scene.children[scene.children.length-1]);
  // Three practical shelving rows with products placed on the shelves.
- const metal=flat(0x92999c,{roughness:.35,metalness:.5});const productMats=[flat(0xd2a23b),flat(0x3c8d6b),flat(0xc85a45),flat(0x4c79b5),flat(0xe2d8bf)];
+ const metal=flat(0x92999c,{roughness:.35,metalness:.5}),steel=metal;const productMats=[flat(0xd2a23b),flat(0x3c8d6b),flat(0xc85a45),flat(0x4c79b5),flat(0xe2d8bf)];
  for(const sx of[612,620,628]){directBox(null,shelf,1.25,2.1,7.8,sx,1.15,z-4.0);for(const yy of[.55,1.15,1.75]){directBox(null,metal,.08,.07,7.8,sx,yy,z-4);for(let j=0;j<6;j++){const m=directBox(null,productMats[(j+Math.round(sx))%productMats.length],.42,.48,.48,sx+(j%2?-.2:.2),yy+.25,z-7+j*1.15);m.rotation.y=(j%3)*.12}}}
  directBox(null,wood,3.2,1.05,1.2,x+7.8,.65,z+6.7);directBox(null,steel,2.8,.08,.8,x+7.8,1.22,z+6.7);directBox(null,flat(0x222222),.6,.18,.35,x+7.8,1.35,z+6.7);
  // Entry and shelves are blocked physically; leave a clear central aisle.

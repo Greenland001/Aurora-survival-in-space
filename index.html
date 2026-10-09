@@ -299,7 +299,7 @@ const keys={};let jx=0,jy=0;
 function save(){store.set('tlt_save',{step,inv,p:[P.x,P.z,P.yaw]})}
 function setObj(i){obj=i;$('objT').textContent=OBJ[i].t;showTip(OBJ[i].tip);save()}
 function showTip(t){const e=$('tips');if(!t){e.style.display='none';return}e.textContent=t;e.style.display='block';tipT=6}
-function groundAt(x,z){if(inCab)return 1.75;if(x>606&&x<634&&z>146&&z<174)return .15;if(x>330&&x<470&&(Math.abs(z+24)<3||Math.abs(z)<3))return .9;const i=Math.round(x/80),j=Math.round(z/80);return(Math.abs(i)<=3&&Math.abs(j)<=3&&Math.abs(x-i*80)<32&&Math.abs(z-j*80)<32)?.15:0}
+let inTrain=false;function groundAt(x,z){if(inCab)return 1.75;if(inTrain)return 1.15;if(x>606&&x<634&&z>146&&z<174)return .15;if(x>330&&x<470&&(Math.abs(z+24)<3||(z>-4.3&&z<3)))return .9;const i=Math.round(x/80),j=Math.round(z/80);return(Math.abs(i)<=3&&Math.abs(j)<=3&&Math.abs(x-i*80)<32&&Math.abs(z-j*80)<32)?.15:0}
 function collide(x,z,r){for(const b of COL){const cx=clamp(x,b[0],b[2]),cz=clamp(z,b[1],b[3]),dx=x-cx,dz=z-cz,d2=dx*dx+dz*dz;if(d2<r*r){if(d2>1e-8){const d=Math.sqrt(d2),k=(r-d)/d;x+=dx*k;z+=dz*k}else{const l=x-b[0],rr=b[2]-x,t=z-b[1],bb=b[3]-z,m=Math.min(l,rr,t,bb);if(m===l)x=b[0]-r;else if(m===rr)x=b[2]+r;else if(m===t)z=b[1]-r;else z=b[3]+r}}}
  for(const c of CIR){const dx=x-c[0],dz=z-c[1],rr=r+c[2],d2=dx*dx+dz*dz;if(d2<rr*rr&&d2>1e-8){const d=Math.sqrt(d2),k=(rr-d)/d;x+=dx*k;z+=dz*k}}return[clamp(x,-294,inCab?3000:700),clamp(z,-294,294)]}
 function nearBoard(){for(const b of BOARDS)if(Math.hypot(P.x-b.x,P.z-b.z)<3.6)return b;return null}
@@ -308,7 +308,7 @@ const beam=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,70,12,1,true),new THR
 function update(dt){
  if(state!=='play'||uiOpen)return;
  const f=jy+(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),r=jx+(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),l=Math.hypot(f,r),sprint=run||keys.ShiftLeft;
- if(l>.05){const k=Math.min(1,l),sp=(sprint?6.6:4.2)*k,sn=Math.sin(P.yaw),cs=Math.cos(P.yaw),dx=(-sn*f+cs*r)/Math.max(1,l)*sp*dt,dz=(-cs*f-sn*r)/Math.max(1,l)*sp*dt;const c=collide(P.x+dx,P.z+dz,.38);P.x=c[0];P.z=c[1];if(inCab){P.x=clamp(P.x,loco.position.x-6.2,loco.position.x-2.9);P.z=clamp(P.z,38.7,41.3)}P.bob+=dt*(sprint?11:7.5)*k;P.step+=dt*(sprint?3.3:2.2)*k;if(P.step>=1){P.step=0;noiseBurst(.09,sprint?900:600,.06*settings.vol+.02)}}
+ if(l>.05){const k=Math.min(1,l),sp=(sprint?6.6:4.2)*k,sn=Math.sin(P.yaw),cs=Math.cos(P.yaw),dx=(-sn*f+cs*r)/Math.max(1,l)*sp*dt,dz=(-cs*f-sn*r)/Math.max(1,l)*sp*dt;const c=collide(P.x+dx,P.z+dz,.38);P.x=c[0];P.z=c[1];if(inTrain){P.x=clamp(P.x,loco.position.x-23.2,loco.position.x+22.8);P.z=clamp(P.z,-6.5,-5.5)}if(inCab){P.x=clamp(P.x,loco.position.x-6.2,loco.position.x-2.9);P.z=clamp(P.z,38.7,41.3)}P.bob+=dt*(sprint?11:7.5)*k;P.step+=dt*(sprint?3.3:2.2)*k;if(P.step>=1){P.step=0;noiseBurst(.09,sprint?900:600,.06*settings.vol+.02)}}
  const gy=groundAt(P.x,P.z);P.ground=lerp(P.ground,gy,Math.min(1,dt*14));
  if((jumpReq||keys.Space)&&P.y<=P.ground+.02){P.vy=4.4}jumpReq=false;P.vy-=12*dt;P.y+=P.vy*dt;if(P.y<=P.ground){P.y=P.ground;if(P.vy<0)P.vy=0}
  const near=nearAct(),b=$('bI');b.disabled=!near;b.textContent=near?near.label:'—';
@@ -320,8 +320,8 @@ function update(dt){
 function interact(){if(state!=='play'||uiOpen)return;const a=nearAct();if(a)a.fn()}
 function openRead(t,lines){uiOpen=true;$('rT').textContent=t;$('rB').innerHTML=lines.map(l=>'<p>'+l+'</p>').join('');show('read')}
 /* ---------- локомотив ---------- */
-const lampMat=flat(0x222222,{emissive:0x66ff99,emissiveIntensity:0}),hlm=flat(0x222222,{emissive:0xfff2c0,emissiveIntensity:0}),locoBox=[514,-8,566,-4],loco=new THREE.Group(),wheels=[];
-COL.push(locoBox);loco.position.set(540,0,-6);scene.add(loco);
+const lampMat=flat(0x222222,{emissive:0x66ff99,emissiveIntensity:0}),hlm=flat(0x222222,{emissive:0xfff2c0,emissiveIntensity:0}),locoBox=[374,-8,426,-4.4],loco=new THREE.Group(),wheels=[];
+COL.push(locoBox);loco.position.set(400,0,-6);scene.add(loco);
 {const bm=flat(0x6b3a2c,{roughness:.9,metalness:.3}),dk=flat(0x232528),yl=flat(0xb89a30,{roughness:.8}),rs=flat(0x4f2f22,{roughness:1,metalness:.2}),gl=new THREE.MeshStandardMaterial({color:0x7a9ab0,transparent:true,opacity:.35,roughness:.1,depthWrite:false}),
  pm=(w,h,d,mt,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mt);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;loco.add(o);return o};
  pm(14,.5,3,dk,0,1.25,0);pm(7.4,2.4,3,bm,3,2.7,0);pm(7.4,.25,3.2,dk,3,4,0);pm(.3,2,3.1,yl,6.75,2.7,0);pm(.6,.9,.6,dk,5.2,4.6,0);pm(.35,.5,.9,hlm,6.9,3.5,0);
@@ -332,45 +332,44 @@ COL.push(locoBox);loco.position.set(540,0,-6);scene.add(loco);
  for(const z of[-1,1]){pm(.4,.4,.4,dk,7.2,1.5,z);pm(.4,.4,.4,dk,-7.2,1.5,z)}
  for(let i=0;i<9;i++){const z=R()<.5?-1.52:1.52;pm(.8+R()*1.4,.5,.05,rs,-1+R()*7,2.3+R()*1.5,z)}
  for(const x of[-4,-2.4,-.8,2.2,3.8,5.4])for(const z of[-1.5,1.5]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.55,.55,.2,14).rotateX(Math.PI/2),dk);w.position.set(x,.55,z);w.castShadow=true;loco.add(w);wheels.push(w)}}
-/* Современный пассажирский состав: четыре белых вагона, синяя полоса и кабина машиниста */
+/* Пассажирский состав: полые вагоны с проходом, настоящими окнами, сиденьями, дверями и пассажирами */
 {
  loco.clear();wheels.length=0;
- const bodyMat=flat(0xf0f1ee,{roughness:.52,metalness:.18}),stripeMat=flat(0x1763a2,{roughness:.45,metalness:.2}),windowMat=new THREE.MeshStandardMaterial({color:0x203d51,roughness:.18,metalness:.35,emissive:0x0a1720,emissiveIntensity:.18}),rubber=flat(0x202326,{roughness:.9}),metal=flat(0x777f85,{roughness:.5,metalness:.65}),doorMat=flat(0xd6d9d9,{roughness:.5,metalness:.2}),seatMat=flat(0x31516a,{roughness:.9});
+ const bodyMat=flat(0xf0f1ee,{roughness:.52,metalness:.18}),stripeMat=flat(0x1763a2,{roughness:.45,metalness:.2}),windowMat=new THREE.MeshStandardMaterial({color:0x203d51,roughness:.18,metalness:.35,emissive:0x0a1720,emissiveIntensity:.18}),rubber=flat(0x202326,{roughness:.9}),metal=flat(0x777f85,{roughness:.5,metalness:.65}),doorMat=flat(0xd6d9d9,{roughness:.5,metalness:.2}),seatMat=flat(0x31516a,{roughness:.9}),
+ glassW=new THREE.MeshStandardMaterial({color:0xa9d0e4,transparent:true,opacity:.22,roughness:.05,metalness:.1,depthWrite:false}),floorM=flat(0x4a4f55,{roughness:.9}),inner=flat(0xe4e6e2,{roughness:.9}),aisle=flat(0x5a6168,{roughness:.95}),lightM=flat(0xffffff,{emissive:0xfff4d8,emissiveIntensity:1.1}),
+ pasCol=[0x4c6178,0x7a4b3c,0x435b49,0x9a7447,0x6b4a68,0x3d6b79,0x8a4f56,0x555b60],PL=['Говорят, это последний поезд из города.','Я видел их на улице. Не смотрите в окна.','Только бы доехать до безопасной зоны.','Вы тоже слышали новости? Это правда.','Держитесь ближе к проходу, так спокойнее.','Моя семья осталась там... Надеюсь, они живы.'];
  const box=(mat,w,h,d,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;loco.add(m);return m};
- // Четыре пассажирских секции в одном составе; передняя секция имеет кабину машиниста.
+ window.__seats=[];window.__pass=[];window.__leaves=[];let k=0;
  for(let ci=0;ci<4;ci++){
   const x=-18+ci*12;
-  box(bodyMat,11.5,3.15,3.15,x,2.15,0);
-  box(bodyMat,11.6,.16,3.2,x,3.79,0);
-  // Непрерывная синяя полоса по обеим сторонам белого корпуса
-  for(const side of[-1,1]){
-   box(stripeMat,11.45,.36,.045,x,1.95,side*1.595);
-   for(let j=0;j<6;j++){
-    const wx=x-4.35+j*1.7;
-    if(j===2||j===3){box(doorMat,.88,1.9,.06,wx,2.05,side*1.61);box(windowMat,.62,.62,.035,wx,2.72,side*1.65)}
-    else {box(windowMat,1.12,.82,.045,wx,2.75,side*1.62);box(metal,.05,.9,.04,wx-.58,2.75,side*1.65)}
-   }
+  box(floorM,11.6,.3,3.1,x,1.0,0);box(aisle,11.2,.03,1.2,x,1.16,0);
+  box(bodyMat,11.6,.2,3.2,x,3.85,0);box(inner,11.3,.06,3,x,3.72,0);
+  for(const s of[-1,1]){
+   const zz=s*1.54;
+   for(const cx of[-3.5,3.5])box(bodyMat,4.6,.85,.1,x+cx,1.575,zz);
+   box(bodyMat,11.6,.6,.1,x,3.4,zz);box(stripeMat,11.6,.3,.04,x,1.9,s*1.59);
+   for(const [cx,w] of[[-5.5,.6],[-3.8,.4],[-1.8,1.2],[1.8,1.2],[3.8,.4],[5.5,.6]])box(bodyMat,w,1.1,.1,x+cx,2.55,zz);
+   for(const wx of[-4.6,-3.0,3.0,4.6]){box(glassW,1.2,1.1,.03,x+wx,2.55,s*1.55);box(metal,1.25,.05,.12,x+wx,2.0,s*1.55);box(metal,1.25,.05,.12,x+wx,3.1,s*1.55)}
+   for(const e of[-1,1]){const m=box(doorMat,1.2,1.95,.05,x+e*1.8,2.12,s*1.62);window.__leaves.push({m,o:x+e*1.8,c:x+e*.6})}
+   for(const sx of[-4.6,-3.0,3.0,4.6]){const lx=x+sx;
+    box(seatMat,.7,.4,.7,lx,1.35,s*1.0);box(seatMat,.12,.8,.7,lx-.34,1.95,s*1.0);
+    const seat={lx,lz:s*1.0,taken:false,res:false,init:false};window.__seats.push(seat);k++;
+    if(k%3===1){const h=human(pasCol[k%8]);h.scale.setScalar(.9);h.position.set(lx+.03,.8,s*1.0);loco.add(h);seat.taken=seat.init=true;window.__pass.push({lx,lz:s*1.0,line:PL[k%6]})}}
   }
-  // Межвагонные переходы и видимые колёсные тележки
-  if(ci<3){box(rubber,.34,2.5,2.3,x+5.9,2.0,0);box(metal,.18,2.55,2.5,x+6.08,2.0,0)}
-  for(const wx of[x-4.1,x-3.2,x+3.2,x+4.1]){
-   for(const side of[-1,1]){
-    const wh=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.22,16),rubber);wh.rotation.x=Math.PI/2;wh.position.set(wx,.56,side*1.22);loco.add(wh);wheels.push(wh);
-    const hub=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.235,12),metal);hub.rotation.x=Math.PI/2;hub.position.set(wx,.56,side*1.22);loco.add(hub);
-   }
-  }
-  box(doorMat,.1,.75,2.45,x-5.65,1.15,0);box(doorMat,.1,.75,2.45,x+5.65,1.15,0);
-  // Сиденья читаются через крупные окна, но не перекрывают проход.
-  for(const sx of[x-2.3,x+.2,x+2.7])for(const side of[-1,1]){
-   box(seatMat,.72,.55,.62,sx,1.25,side*.58);box(seatMat,.72,.65,.12,sx,1.65,side*.82);
-  }
+  for(const e of[-1,1]){const ex=x+e*5.75;
+   if(ci===0&&e===-1)box(bodyMat,.1,2.55,3.1,ex,2.42,0);
+   else if(!(ci===3&&e===1)){box(bodyMat,.1,2.55,.8,ex,2.42,-1.15);box(bodyMat,.1,2.55,.8,ex,2.42,1.15);box(bodyMat,.1,.6,1.5,ex,3.4,0)}}
+  if(ci<3){for(const s of[-1,1])box(rubber,.4,2.6,.08,x+6,2.45,s*.85);box(rubber,.4,.1,1.7,x+6,3.7,0);box(floorM,.4,.3,1.7,x+6,1.0,0)}
+  for(const wx of[x-4.1,x-3.2,x+3.2,x+4.1])for(const side of[-1,1]){
+   const wh=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.22,16),rubber);wh.rotation.x=Math.PI/2;wh.position.set(wx,.56,side*1.22);loco.add(wh);wheels.push(wh);
+   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.235,12),metal);hub.rotation.x=Math.PI/2;hub.position.set(wx,.56,side*1.22);loco.add(hub)}
+  box(lightM,1.6,.04,.5,x-2.6,3.66,0);box(lightM,1.6,.04,.5,x+2.6,3.66,0);box(metal,11,.05,.05,x,3.3,0);
+  if(ci===1||ci===2){const l=new THREE.PointLight(0xfff4e0,.9,14);l.position.set(x,3.2,0);loco.add(l)}
  }
- // Нос и лобовое стекло кабины машиниста в передней части состава (+X)
  box(bodyMat,2.4,2.65,3.05,24.2,2.28,0);box(bodyMat,1.2,.45,3.15,24.35,3.78,0);
  box(windowMat,.12,1.15,2.25,25.43,2.8,0);box(windowMat,.1,.72,.72,24.85,3.25,-.95);box(windowMat,.1,.72,.72,24.85,3.25,.95);
  box(stripeMat,2.35,.36,3.12,24.15,1.95,0);
  for(const side of[-1,1]){const lamp=new THREE.Mesh(new THREE.SphereGeometry(.16,12,8),new THREE.MeshBasicMaterial({color:0xfff0c2}));lamp.position.set(25.35,1.55,side*.9);loco.add(lamp)}
- // Бамперы и сцепки на обоих концах
  box(rubber,.55,.38,1.3,25.55,.78,0);box(metal,.65,.18,.5,25.7,.58,0);box(rubber,.55,.38,1.3,-24.1,.78,0);
 }
 /* ---------- полноценный интерьер квартиры и магазина ---------- */
@@ -383,7 +382,7 @@ function buildApartment(){
  // The old building shell remains part of the city; replace its first-floor collision with a navigable room.
  for(let i=COL.length-1;i>=0;i--){const b=COL[i];if(Math.abs(b[0]+186)<.01&&Math.abs(b[1]+26)<.01&&Math.abs(b[2]+160)<.01&&Math.abs(b[3]-26)<.01)COL.splice(i,1)}
  const x=-173,z=0,wall=flat(0xd1c8b8,{roughness:.95}),floor=flat(0x776b5e,{roughness:.98}),trim=flat(0xede4d6,{roughness:.85}),wood=flat(0x6b4933,{roughness:.88}),fabric=flat(0x526b7b,{roughness:.98}),dark=flat(0x24282b,{roughness:.65}),glass=new THREE.MeshStandardMaterial({color:0x7198ad,roughness:.2,metalness:.15,emissive:0x101e25});
- directBox(null,floor,21.5,.18,40.5,x,.02,z);
+ directBox(null,floor,21.5,.18,40.5,x,.02,z);directBox(null,wall,21.5,.2,40.5,x,3.55,z);
  // Walls and doorway opening on the north side.
  directBox(null,wall,.28,3.4,40.5,x-10.75,1.78,z);
  directBox(null,wall,.28,3.4,40.5,x+10.75,1.78,z);
@@ -445,7 +444,7 @@ function drawTVBroadcast(dt){const tv=window.__tltTV;if(!tv)return;tvAnimT+=dt;c
 }
 function buildStoreInterior(){
  const x=620,z=160,wall=flat(0xc6c0b3,{roughness:.95}),floor=flat(0x8b877e,{roughness:1}),shelf=flat(0x53606a,{roughness:.8,metalness:.2}),wood=flat(0x76563b,{roughness:.9});
- directBox(null,floor,23,.18,23,x,.02,z);directBox(null,wall,.25,3.5,23,x-11.5,1.8,z);directBox(null,wall,.25,3.5,23,x+11.5,1.8,z);directBox(null,wall,8.7,3.5,.25,x-7.15,1.8,z+11.5);directBox(null,wall,8.7,3.5,.25,x+7.15,1.8,z+11.5);directBox(null,wall,23,3.5,.25,x,1.8,z-11.5);
+ directBox(null,floor,23,.18,23,x,.02,z);directBox(null,wall,23,.2,23,x,3.6,z);directBox(null,wall,.25,3.5,23,x-11.5,1.8,z);directBox(null,wall,.25,3.5,23,x+11.5,1.8,z);directBox(null,wall,8.7,3.5,.25,x-7.15,1.8,z+11.5);directBox(null,wall,8.7,3.5,.25,x+7.15,1.8,z+11.5);directBox(null,wall,23,3.5,.25,x,1.8,z-11.5);
  const frame=flat(0x343b42,{roughness:.8}),door=flat(0x5c4434,{roughness:.9});directBox(null,frame,.18,3.1,.18,x-1.65,1.55,z+11.45);directBox(null,frame,.18,3.1,.18,x+1.65,1.55,z+11.45);directBox(null,door,3.1,2.8,.12,x,1.4,z+11.5);storeDoorPanels.push(scene.children[scene.children.length-1]);
  // Three practical shelving rows with products placed on the shelves.
  const metal=flat(0x92999c,{roughness:.35,metalness:.5}),steel=metal;const productMats=[flat(0xd2a23b),flat(0x3c8d6b),flat(0xc85a45),flat(0x4c79b5),flat(0xe2d8bf)];
@@ -467,7 +466,7 @@ function nearAct(){
  if(!inHome&&!inStore&&Math.hypot(P.x-HOME[0],P.z-HOME[1])<4.4)return{x:HOME[0],z:HOME[1],label:homeDoorLocked?'Открыть дверь ключом':'Войти в квартиру',fn:enterHome,r:4.4};
  for(const a of ACTS)if(Math.hypot(P.x-a.x,P.z-a.z)<(a.r||3.4))return a;return null
 }
-const HOME=[-173,-28],STORE=[59,0],ROAD=[-120,-24],STATION=[400,0],TRAIN=[540,-6],HOME_TV=[-173,-8.5],STORE_INT=[620,160];
+const HOME=[-173,-28],STORE=[59,0],ROAD=[-120,-24],STATION=[400,0],TRAIN=[400,-3.4],HOME_TV=[-173,-8.5],STORE_INT=[620,160];
 let step=0,inCab=false,riding=false,speed=0,rideT=0,cd=null,dsc=null,sirenT=0;
 const ST=[
  {t:'Осмотрите квартиру и посмотрите утренние новости по телевизору.',tg:HOME_TV,tip:'Вы дома. Осмотритесь и подойдите к телевизору.'},
@@ -476,7 +475,7 @@ const ST=[
  {t:'Вернитесь домой и откройте дверь ключом.',tg:HOME,tip:'Ключи от квартиры уже у вас.'},
  {t:'Доберитесь до железнодорожной станции за восточной окраиной города.',tg:STATION,tip:'На станции сотрудники сообщают об изменениях в расписании.'},
  {t:'Найдите альтернативный путь к железнодорожным путям: старый состав у депо.',tg:TRAIN,tip:'Идите вдоль путей на восток.'},
- {t:'Осмотрите кабину и включите питание.',tg:null},{t:'Проверьте приборы.',tg:null},{t:'Запустите двигатель.',tg:null},{t:'Потяните рычаг тяги и начните движение.',tg:null},{t:'Поезд в пути.',tg:null}];
+ {t:'Осмотритесь в вагоне и займите свободное место. Отправление скоро.',tg:null},{t:'Проверьте приборы.',tg:null},{t:'Запустите двигатель.',tg:null},{t:'Потяните рычаг тяги и начните движение.',tg:null},{t:'Поезд в пути.',tg:null}];
 function setStep(i){step=i;
  if(i===3){ST[3].t=inHome?'Посмотрите экстренные новости по телевизору.':'Вернитесь домой и откройте дверь ключом.';ST[3].tg=inHome?HOME_TV:HOME;}
  $('objT').textContent=ST[i].t;showTip(ST[i].tip);ACTS.length=NB;
@@ -484,7 +483,7 @@ function setStep(i){step=i;
  if(i===0)add(HOME_TV[0],HOME_TV[1],'Посмотреть новости',news1,4.2);
  if(i===2)add(STORE[0],STORE[1],'Войти в магазин',enterStore,4.2);
  if(i===5)add(TRAIN[0],TRAIN[1],'Сесть в пассажирский вагон',boardTrain,5);
- if(i>=6&&i<=9)add(loco.position.x-4.2,40,['Включить питание','Проверить приборы','Запустить двигатель','Тяга: вперёд'][i-6],cabAct,3.4);
+ if(i>=7&&i<=9)add(loco.position.x-4.2,40,['Включить питание','Проверить приборы','Запустить двигатель','Тяга: вперёд'][i-6],cabAct,3.4);
  save()}
 
 function tn(f,t,v,f2,type){const c=AU.ctx;if(!c||c.state!=='running')return;const o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,c.currentTime);if(f2)o.frequency.linearRampToValueAtTime(f2,c.currentTime+t);g.gain.setValueAtTime(Math.max(.0002,v*settings.vol),c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+t);o.connect(g);g.connect(AU.master);o.start();o.stop(c.currentTime+t)}
@@ -505,7 +504,8 @@ function exitHome(){homeDoorOpen=true;setHomeDoorVisual();inHome=false;homeDoorL
 function stationMsg(){card({slow:.3},['Внимание! Отправления задерживаются: диспетчеры проверяют состояние путей.','Сотрудники станции просят пассажиров оставаться на платформах и следить за объявлениями.','Один состав уже прошёл предпусковую подготовку. Решение об отправлении пока не объявлено.'],()=>{P.x=STATION[0];P.z=2.5;P.yaw=-Math.PI/2;setStep(5)})}
 function enterCab(){boardTrain()}
 let departureT=0;
-function boardTrain(){if(state!=='play'||riding)return;inCab=false;riding=true;departureT=0;rideT=0;speed=0;P.x=loco.position.x-13;P.z=-6;P.y=1.7;P.yaw=-Math.PI/2;P.pitch=0;setStep(10);state='departing';$('hud').style.display='none';showTip('Вы поднялись в пассажирский вагон. Машинист готовит отправление.');noiseBurst(.25,180,.12)}
+function boardTrain(){if(state!=='play'||riding||inTrain)return;inTrain=true;inCab=false;if(COL.indexOf(locoBox)>=0)COL.splice(COL.indexOf(locoBox),1);P.x=loco.position.x-6;P.z=-6;P.y=P.ground=1.15;P.yaw=-Math.PI/2;P.pitch=0;setStep(6);showTip('Вы вошли в вагон. Осмотритесь, поговорите с пассажирами и займите место.');noiseBurst(.2,300,.1)}
+function startRide(){if(state!=='play'||riding)return;inTrain=false;inCab=false;riding=true;departureT=0;rideT=0;speed=0;P.x=loco.position.x-13;P.z=-6;P.y=1.7;P.yaw=-Math.PI/2;P.pitch=0;setStep(10);state='departing';$('hud').style.display='none';showTip('Вы поднялись в пассажирский вагон. Машинист готовит отправление.');noiseBurst(.25,180,.12)}
 function startEngine(){const c=AU.ctx;if(!c||AU.eng)return;const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();o.type='sawtooth';o.frequency.value=42;f.type='lowpass';f.frequency.value=260;g.gain.value=.07*settings.vol;o.connect(f);f.connect(g);g.connect(AU.master);o.start();AU.eng=o}
 function cabAct(){if(step===6){lampMat.emissiveIntensity=2.2;noiseBurst(.12,1500,.2);showTip('Питание включено: загорелись индикаторы.');setStep(7)}
  else if(step===7){noiseBurst(.1,900,.15);showTip('Давление в норме, тормоза отпущены, топливо есть.');setStep(8)}
@@ -522,7 +522,7 @@ function departureUpdate(dt){
  if(departureT>20)endGame();
 }
 function outbreak(){atmos('outbreak');movers.forEach(m=>{if(Math.random()<.65)m.stop=true});if(!sirenT)sirenT=setInterval(()=>{tn(720,.7,.045,980);setTimeout(()=>tn(980,.7,.045,720),800);if(Math.random()<.5)setTimeout(()=>tn(430,.22,.09),300)},1800)}
-function resetWorld(){inCab=false;riding=false;inHome=false;inStore=false;homeDoorLocked=true;homeDoorOpen=false;tvNewsStage=0;tvAnimT=0;storeLooted=false;setHomeDoorVisual();departureT=0;speed=0;rideT=0;loco.position.set(540,0,-6);locoBox.splice(0,4,514,-8,566,-4);lampMat.emissiveIntensity=0;hlm.emissiveIntensity=0;cd=null;cleanDeer();clearInterval(sirenT);sirenT=0;atmos('day');movers.forEach(m=>m.stop=false);speechCancel();if(AU.eng){try{AU.eng.stop()}catch(e){}AU.eng=null}const c=$('cine');c.style.display='none';c.style.opacity=1;$('cCap').style.display='none';$('cSkip').style.display='';$('cSkip').textContent='Пропустить'}
+function resetWorld(){inTrain=false;if(COL.indexOf(locoBox)<0)COL.push(locoBox);inCab=false;riding=false;inHome=false;inStore=false;homeDoorLocked=true;homeDoorOpen=false;tvNewsStage=0;tvAnimT=0;storeLooted=false;setHomeDoorVisual();departureT=0;speed=0;rideT=0;loco.position.set(400,0,-6);locoBox.splice(0,4,374,-8,426,-4.4);lampMat.emissiveIntensity=0;hlm.emissiveIntensity=0;cd=null;cleanDeer();clearInterval(sirenT);sirenT=0;atmos('day');movers.forEach(m=>m.stop=false);speechCancel();if(AU.eng){try{AU.eng.stop()}catch(e){}AU.eng=null}const c=$('cine');c.style.display='none';c.style.opacity=1;$('cCap').style.display='none';$('cSkip').style.display='';$('cSkip').textContent='Пропустить'}
 function storyTick(dt){if(step===1&&!inHome&&Math.hypot(P.x-ROAD[0],P.z-ROAD[1])<5)deerScene();else if(step===4&&!inHome&&Math.hypot(P.x-STATION[0],P.z-STATION[1])<12)stationMsg();
  if(riding&&state==='play'){speed=Math.min(18,speed+2*dt);const d=speed*dt;loco.position.x+=d;P.x+=d;wheels.forEach(w=>w.rotation.z-=d/.55);if(AU.eng)AU.eng.frequency.value=40+speed*3;rideT+=dt;if(rideT>28)endGame()}}
 /* ---------- сцена с оленем ---------- */
@@ -731,6 +731,34 @@ const nA=nearAct;nearAct=function(){const a=nA();if(a)return a;
   for(let i=0;i<parked;i++){if(looted.has(i))continue;const b=carBox[i];if(Math.abs((b[0]+b[2])/2-P.x)>6)continue;if(Math.hypot(P.x-clamp(P.x,b[0],b[2]),P.z-clamp(P.z,b[1],b[3]))<1.6)return{x:P.x,z:P.z,label:'Обыскать машину',fn:()=>search(i),r:2}}}
  return null};
 applyGfx();refUI();
+}
+
+/* ===== MOD v3: поезд — вход, ходьба, посадка людей ===== */
+{
+directBox(null,MATS.walk,140,.9,1.5,400,.45,-3.65);
+const S=window.__seats,PS=window.__pass,LV=window.__leaves,PS0=PS.slice(),bd=[];let bSp=false,tT=0,tip1=false;
+const cl2=[0x4c6178,0x7a4b3c,0x435b49,0x9a7447,0x4a4d68,0x686868,0x3d6b79,0x8a4f56];
+const L2=['Говорят, это последний поезд из города.','Я видел их на улице. Не смотрите в окна.','Только бы доехать до безопасной зоны.','Вы тоже слышали новости? Это правда.','Держитесь ближе к проходу, так спокойнее.','Моя семья осталась там... Надеюсь, они живы.'];
+function spawnB(){bSp=true;S.filter(s=>!s.taken&&!s.res).sort(()=>Math.random()-.5).slice(0,12).forEach((s,i)=>{s.res=true;const h=human(cl2[i%8]);h.position.set(345+Math.random()*115,.9,-1+Math.random()*3);scene.add(h);bd.push({h,s,x:h.position.x,z:h.position.z,d:i*3.5+Math.random()*3,st:0,ph:Math.random()*9,line:L2[i%6]})})}
+function sit(b){const s=b.s;loco.add(b.h);b.h.position.set(s.lx+.03,.8,s.lz);b.h.rotation.set(0,0,0);b.h.scale.setScalar(.9);b.h.userData.legs.forEach(l=>l.rotation.z=0);s.taken=true;b.st=5;PS.push({lx:s.lx,lz:s.lz,line:b.line})}
+function tickB(dt){for(const b of bd){if(b.st>=5)continue;if(state==='departing'||riding){sit(b);continue}
+ b.d-=dt;if(b.d>0)continue;b.ph+=dt;const lx=loco.position.x,ci=Math.floor((b.s.lx+24)/12),dx0=lx-18+ci*12;
+ let tx,tz;if(b.st===0){tx=dx0;tz=-3.2}else if(b.st===1){tx=dx0;tz=-6}else{tx=lx+b.s.lx;tz=-6}
+ const ex=tx-b.x,ez=tz-b.z,d=Math.hypot(ex,ez);
+ if(d<.25){b.st++;if(b.st===3)sit(b);continue}
+ b.x+=ex/d*2*dt;b.z+=ez/d*2*dt;b.h.position.set(b.x,b.st>=1?1.15:.9,b.z);b.h.rotation.y=-Math.atan2(ez,ex);b.h.userData.legs.forEach((l,i)=>l.rotation.z=Math.sin(b.ph*8+i*Math.PI)*.4)}}
+function trainAct(){const lx=loco.position.x;
+ for(let ci=0;ci<4;ci++){const cx=lx-18+ci*12;if(Math.abs(P.x-cx)<1.5)return{x:cx,z:-6,label:'Выйти на платформу',fn:()=>{inTrain=false;if(COL.indexOf(locoBox)<0)COL.push(locoBox);P.x=cx;P.z=-3.5;P.y=P.ground=.9;showTip('Вы вышли на платформу.')},r:1.5}}
+ for(const p of PS)if(Math.hypot(P.x-(lx+p.lx),P.z+6-p.lz)<1.7)return{x:P.x,z:P.z,label:'Поговорить',fn:()=>{speak(p.line);showTip('Пассажир: '+p.line)},r:1.7};
+ for(const s of S)if(!s.taken&&!s.res&&Math.hypot(P.x-(lx+s.lx),P.z+6-s.lz)<1.7)return{x:P.x,z:P.z,label:'Сесть на место',fn:()=>{showTip('Вы сели у окна. Поезд отправляется.');startRide()},r:1.7};
+ if(P.x>lx+19)return{x:P.x,z:P.z,label:'Кабина машиниста',fn:()=>showTip('Дверь в кабину заперта. Машинист ведёт состав.'),r:3};
+ return null}
+const nA3=nearAct;nearAct=function(){return inTrain?trainAct():nA3()};
+const uc3=updateCars;updateCars=function(dt){uc3(dt);
+ if(step>=5&&!bSp&&!riding)spawnB();tickB(dt);
+ if(state==='departing'){const u=clamp((departureT-1.4)/2.2,0,1);LV.forEach(l=>l.m.position.x=l.o+(l.c-l.o)*u)}
+ if(inTrain&&state==='play'){tT+=dt;if(tT>40&&!tip1){tip1=true;showTip('Поезд скоро отправится. Займите место.')}if(tT>110)startRide()}else if(!inTrain)tT=0};
+const rw3=resetWorld;resetWorld=function(){rw3();bd.forEach(b=>{if(b.h.parent)b.h.parent.remove(b.h)});bd.length=0;PS.length=0;PS.push(...PS0);S.forEach(s=>{s.res=false;if(!s.init)s.taken=false});bSp=false;tT=0;tip1=false;LV.forEach(l=>l.m.position.x=l.o)};
 }
 
 applyQuality();resize();$('mCont').disabled=!store.get('tlt_save',null);$('loadT').textContent='Готово. Нажмите «Новая игра».';frame();

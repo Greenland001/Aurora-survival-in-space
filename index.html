@@ -760,10 +760,6 @@ const uc3=updateCars;updateCars=function(dt){uc3(dt);
  if(inTrain&&state==='play'){tT+=dt;if(tT>40&&!tip1){tip1=true;showTip('Поезд скоро отправится. Займите место.')}if(tT>110)startRide()}else if(!inTrain)tT=0};
 const rw3=resetWorld;resetWorld=function(){rw3();bd.forEach(b=>{if(b.h.parent)b.h.parent.remove(b.h)});bd.length=0;PS.length=0;PS.push(...PS0);S.forEach(s=>{s.res=false;if(!s.init)s.taken=false});bSp=false;tT=0;tip1=false;LV.forEach(l=>l.m.position.x=l.o)};
 }catch(e){__err(e)}
-/* ===== MOD v4: ЭТАП 2 «Новый город» ===== */
-try{
-const X0=6000,S2={on:false,ph:'',t:0,sp:0,city:null,built:false,hp:100,eq:false,cd:0,dt:0,lm:[],cols:[],pp:null,so:[],dead:false},PS2=window.__pass,LV2=window.__leaves,SKN=0xd6a57e;
-window.__s2on=false;window.__s2g=(x,z)=>inTrain?1.15:(Math.abs(x-X0)<48&&z>-4.4&&z<3?.9:0);
-ITEMS.fuel={n:'Топливо',d:'Канистра с топливом. Пригодится в дальнейшем пути.'};ITEMS.axe={n:'Топор',d:'Позволяет отбиваться от зомби.'};SLOTS.splice(5,1,'fuel','axe');
-const g2=new THREE.Group();g2.visible=false;scene.add(g2);
-const gnd=new THREE.Mesh(new
+
+</script>
+</body></html>

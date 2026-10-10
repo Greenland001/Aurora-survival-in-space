@@ -299,9 +299,9 @@ const keys={};let jx=0,jy=0;
 function save(){store.set('tlt_save',{step,inv,p:[P.x,P.z,P.yaw]})}
 function setObj(i){obj=i;$('objT').textContent=OBJ[i].t;showTip(OBJ[i].tip);save()}
 function showTip(t){const e=$('tips');if(!t){e.style.display='none';return}e.textContent=t;e.style.display='block';tipT=6}
-let inTrain=false;function groundAt(x,z){if(inCab)return 1.75;if(inTrain)return 1.15;if(x>606&&x<634&&z>146&&z<174)return .15;if(x>330&&x<470&&(Math.abs(z+24)<3||(z>-4.3&&z<3)))return .9;const i=Math.round(x/80),j=Math.round(z/80);return(Math.abs(i)<=3&&Math.abs(j)<=3&&Math.abs(x-i*80)<32&&Math.abs(z-j*80)<32)?.15:0}
+let inTrain=false;function groundAt(x,z){if(window.__s2on)return window.__s2g(x,z);if(inCab)return 1.75;if(inTrain)return 1.15;if(x>606&&x<634&&z>146&&z<174)return .15;if(x>330&&x<470&&(Math.abs(z+24)<3||(z>-4.3&&z<3)))return .9;const i=Math.round(x/80),j=Math.round(z/80);return(Math.abs(i)<=3&&Math.abs(j)<=3&&Math.abs(x-i*80)<32&&Math.abs(z-j*80)<32)?.15:0}
 function collide(x,z,r){for(const b of COL){const cx=clamp(x,b[0],b[2]),cz=clamp(z,b[1],b[3]),dx=x-cx,dz=z-cz,d2=dx*dx+dz*dz;if(d2<r*r){if(d2>1e-8){const d=Math.sqrt(d2),k=(r-d)/d;x+=dx*k;z+=dz*k}else{const l=x-b[0],rr=b[2]-x,t=z-b[1],bb=b[3]-z,m=Math.min(l,rr,t,bb);if(m===l)x=b[0]-r;else if(m===rr)x=b[2]+r;else if(m===t)z=b[1]-r;else z=b[3]+r}}}
- for(const c of CIR){const dx=x-c[0],dz=z-c[1],rr=r+c[2],d2=dx*dx+dz*dz;if(d2<rr*rr&&d2>1e-8){const d=Math.sqrt(d2),k=(rr-d)/d;x+=dx*k;z+=dz*k}}return[clamp(x,-294,inCab?3000:700),clamp(z,-294,294)]}
+ for(const c of CIR){const dx=x-c[0],dz=z-c[1],rr=r+c[2],d2=dx*dx+dz*dz;if(d2<rr*rr&&d2>1e-8){const d=Math.sqrt(d2),k=(rr-d)/d;x+=dx*k;z+=dz*k}}return[clamp(x,-294,(inCab||inTrain||window.__s2on)?20000:700),clamp(z,-294,294)]}
 function nearBoard(){for(const b of BOARDS)if(Math.hypot(P.x-b.x,P.z-b.z)<3.6)return b;return null}
 /* маркер цели */
 const beam=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,70,12,1,true),new THREE.MeshBasicMaterial({color:0xffb030,transparent:true,opacity:.32,depthWrite:false,fog:false}));beam.visible=false;scene.add(beam);
@@ -761,5 +761,11 @@ const uc3=updateCars;updateCars=function(dt){uc3(dt);
 const rw3=resetWorld;resetWorld=function(){rw3();bd.forEach(b=>{if(b.h.parent)b.h.parent.remove(b.h)});bd.length=0;PS.length=0;PS.push(...PS0);S.forEach(s=>{s.res=false;if(!s.init)s.taken=false});bSp=false;tT=0;tip1=false;LV.forEach(l=>l.m.position.x=l.o)};
 }
 
-applyQuality();resize();$('mCont').disabled=!store.get('tlt_save',null);$('loadT').textContent='Готово. Нажмите «Новая игра».';frame();
-</script></body></html>
+/* ===== MOD v4: ЭТАП 2 «Новый город» ===== */
+{
+const X0=6000,S2={on:false,ph:'',t:0,sp:0,city:null,built:false,hp:100,eq:false,cd:0,dt:0,lm:[],cols:[],pp:null,so:[],dead:false},PS2=window.__pass,LV2=window.__leaves,SKN=0xd6a57e;
+window.__s2on=false;window.__s2g=(x,z)=>inTrain?1.15:(Math.abs(x-X0)<48&&z>-4.4&&z<3?.9:0);
+ITEMS.fuel={n:'Топливо',d:'Канистра с топливом. Пригодится в дальнейшем пути.'};ITEMS.axe={n:'Топор',d:'Позволяет отбиваться от зомби.'};SLOTS.splice(5,1,'fuel','axe');
+const g2=new THREE.Group();g2.visible=false;scene.add(g2);
+const gnd=new THREE.Mesh(new THREE.BoxGeometry(4000,.2,3000),flat(0xc9b45a,{roughness:1,metalness:0}));gnd.position.set(X0,-.15,0);g2.add(gnd);
+const bal=new THREE.Mesh(new THREE.BoxGeometry(4000,.24,4.2),MATS.ballast);bal.position.set(X0,.1,-
